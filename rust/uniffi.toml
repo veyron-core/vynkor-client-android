@@ -1,0 +1,3 @@
+[bindings.kotlin]
+# Package name for the generated Kotlin bindings (uniffi-bindgen).
+package_name = "dev.vynkor.agent"

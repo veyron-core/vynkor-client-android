@@ -1,0 +1,25 @@
+[package]
+name = "vynkor-agent-core"
+version = "0.1.0"
+edition = "2021"
+description = "Rust core of the vynkor Android device-agent: protocol engine (framing, frame-MAC, WS, registration) behind a UniFFI boundary"
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+# cdylib -> the .so the Android app loads; lib -> host-side unit tests.
+
+[dependencies]
+# UniFFI bindings generator: proc-macro exports (`#[uniffi::export]`) +
+# `setup_scaffolding!()`. Kotlin bindings generated at build time.
+uniffi = { version = "0.32", features = ["cli"] }
+# 0.2.3 = proto v1.6: device identity (DeviceOs::Android), audio stream,
+# tool schema. All framing/MAC/protobuf types come from here, verbatim.
+veyron-wire = "0.2"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "io-util", "sync", "macros"] }
+tokio-tungstenite = "0.30"
+tracing = "0.1"
+thiserror = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
