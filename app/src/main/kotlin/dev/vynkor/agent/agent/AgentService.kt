@@ -56,6 +56,7 @@ class AgentService : Service() {
             hostUrl = profile.hostUrl,
             jwtToken = profile.jwtToken,
             jwtSecret = profile.jwtSecret,
+            certPem = profile.certPem,
             deviceId = profile.deviceId,
             capabilities = listOf(
                 "geo", "battery", "notifications", "clipboard", "contacts", "mic", "speaker", "chat"

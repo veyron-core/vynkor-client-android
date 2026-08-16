@@ -34,6 +34,9 @@ pub struct RegisterParams {
     pub cap: String,
     pub jwt_token: String,
     pub jwt_secret: Option<String>,
+    /// Host's served TLS cert (PEM) to pin on `wss://` (self-signed). `None` =
+    /// webpki-roots verification.
+    pub cert_pem: Option<String>,
     pub os_version: String,
     pub arch: String,
     pub user_id: String,
@@ -77,9 +80,30 @@ impl CapConn {
             HeaderValue::from_str(&protocol).map_err(|e| AgentError::Connect(e.to_string()))?;
         req.headers_mut().insert("sec-websocket-protocol", value);
 
-        let (ws, _resp) = connect_async(req)
-            .await
-            .map_err(|e| AgentError::Connect(e.to_string()))?;
+        let (ws, _resp) = if url.scheme() == "wss" {
+            match &params.cert_pem {
+                Some(pem) => {
+                    let connector = tokio_tungstenite::Connector::Rustls(std::sync::Arc::new(
+                        pinned_tls_config(pem)?,
+                    ));
+                    tokio_tungstenite::connect_async_tls_with_config(
+                        req,
+                        None,
+                        false,
+                        Some(connector),
+                    )
+                    .await
+                    .map_err(|e| AgentError::Connect(e.to_string()))?
+                }
+                None => connect_async(req)
+                    .await
+                    .map_err(|e| AgentError::Connect(e.to_string()))?,
+            }
+        } else {
+            connect_async(req)
+                .await
+                .map_err(|e| AgentError::Connect(e.to_string()))?
+        };
 
         let plugin_id = params.plugin_id();
         let reg = PluginRegister {
@@ -231,6 +255,28 @@ fn arm_from_ack(
     Ok(key)
 }
 
+/// Build a rustls client config that trusts only the pinned host cert (D-07
+/// "pin the exact served cert" rule for local clients, carried to the phone via
+/// the pairing QR). Parses one or more PEM certs into a root store.
+fn pinned_tls_config(pem: &str) -> Result<rustls::ClientConfig, AgentError> {
+    let mut roots = rustls::RootCertStore::empty();
+    let mut reader = std::io::Cursor::new(pem.as_bytes());
+    for cert in rustls_pemfile::certs(&mut reader) {
+        let cert = cert.map_err(|e| AgentError::Connect(format!("bad cert pem: {e}")))?;
+        roots
+            .add(cert)
+            .map_err(|e| AgentError::Connect(format!("unusable cert: {e}")))?;
+    }
+    if roots.is_empty() {
+        return Err(AgentError::Connect(
+            "cert_pem contained no certificates".into(),
+        ));
+    }
+    Ok(rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth())
+}
+
 /// Map a configured host URL onto a ws(s) endpoint. `http(s)://` becomes
 /// `ws(s)://`; a bare origin gains the gateway's `/ws` path (D-06 rule).
 fn resolve_ws_url(raw: &str) -> Result<url::Url, AgentError> {
@@ -293,6 +339,7 @@ mod tests {
             cap: "geo".into(),
             jwt_token: String::new(),
             jwt_secret: None,
+            cert_pem: None,
             os_version: "14".into(),
             arch: "aarch64".into(),
             user_id: "default".into(),

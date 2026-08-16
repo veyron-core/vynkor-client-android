@@ -21,6 +21,10 @@ prost = "0.13"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "io-util", "sync", "macros"] }
 # WS client, mirrors the kernel D-06 bridge; rustls-tls-webpki-roots for wss://.
 tokio-tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
+# Pin the host's self-signed cert (carried via the pairing QR) so wss:// works
+# without falling back to tls:false.
+rustls = "0.23"
+rustls-pemfile = "2"
 futures-util = "0.3"
 url = "2"
 crc32fast = "1"

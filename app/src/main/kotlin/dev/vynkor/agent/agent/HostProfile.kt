@@ -15,6 +15,7 @@ data class HostProfile(
     val deviceId: String = "",
     val jwtToken: String = "",
     val jwtSecret: String = "",
+    val certPem: String = "",
     val aiProvider: String = "openai",
     val aiModel: String = "",
     val aiBaseUrl: String = "",
@@ -27,6 +28,7 @@ data class HostProfile(
         put("device_id", deviceId)
         put("jwt_token", jwtToken)
         put("jwt_secret", jwtSecret)
+        put("cert_pem", certPem)
         put("ai_provider", aiProvider)
         put("ai_model", aiModel)
         put("ai_base_url", aiBaseUrl)
@@ -41,6 +43,7 @@ data class HostProfile(
             deviceId = o.optString("device_id"),
             jwtToken = o.optString("jwt_token"),
             jwtSecret = o.optString("jwt_secret"),
+            certPem = o.optString("cert_pem"),
             aiProvider = o.optString("ai_provider").ifBlank { "openai" },
             aiModel = o.optString("ai_model"),
             aiBaseUrl = o.optString("ai_base_url"),

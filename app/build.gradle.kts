@@ -61,6 +61,8 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // QR pairing: scan the host's `vynkor://pair` QR to fill a profile.
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }
 
 // Build the Rust core with cargo-ndk and copy the .so files next to the

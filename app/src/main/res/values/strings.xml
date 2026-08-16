@@ -13,6 +13,11 @@
     <string name="connect_button">Connect</string>
     <string name="disconnect_button">Disconnect</string>
     <string name="chat_button">Chat</string>
+    <string name="scan_button">Scan QR</string>
+    <string name="scan_prompt">Point at the host\'s pairing QR (vyn device connect)</string>
+    <string name="scan_cancelled">Scan cancelled</string>
+    <string name="scan_invalid">Not a vynkor pairing QR</string>
+    <string name="paired_and_connected">Paired with %1$s</string>
     <string name="no_profile">No profile</string>
     <string name="unnamed_profile">Unnamed</string>
 

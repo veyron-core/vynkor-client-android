@@ -224,7 +224,12 @@ impl Agent {
                 error: "no live chat connection to host".into(),
             };
         };
-        if out.try_send(Outbound { frame: build_frame(&target, 0, payload) }).is_err() {
+        if out
+            .try_send(Outbound {
+                frame: build_frame(&target, 0, payload),
+            })
+            .is_err()
+        {
             self.take_pending(&action_id);
             return ActionReply {
                 status: ActionReplyStatus::Local,
@@ -248,13 +253,11 @@ impl Agent {
                     error: "request timed out".into(),
                 }
             }
-            Err(RecvTimeoutError::Disconnected) => {
-                ActionReply {
-                    status: ActionReplyStatus::Local,
-                    data_json: Vec::new(),
-                    error: "connection dropped".into(),
-                }
-            }
+            Err(RecvTimeoutError::Disconnected) => ActionReply {
+                status: ActionReplyStatus::Local,
+                data_json: Vec::new(),
+                error: "connection dropped".into(),
+            },
         }
     }
 
@@ -350,6 +353,7 @@ impl Agent {
             jwt_token: self.config.jwt_token.clone(),
             jwt_secret: (!self.config.jwt_secret.is_empty())
                 .then(|| self.config.jwt_secret.clone()),
+            cert_pem: (!self.config.cert_pem.is_empty()).then(|| self.config.cert_pem.clone()),
             os_version: self.config.os_version.clone(),
             arch: self.config.arch.clone(),
             user_id: self.config.user_id.clone(),
@@ -512,7 +516,9 @@ fn map_action_status(status: i32) -> ActionReplyStatus {
         s if s == ActionStatus::ActionPermissionDeny as i32 => ActionReplyStatus::PermissionDenied,
         s if s == ActionStatus::ActionNotFound as i32 => ActionReplyStatus::NotFound,
         s if s == ActionStatus::ActionQuotaExceeded as i32 => ActionReplyStatus::QuotaExceeded,
-        s if s == ActionStatus::ActionStreamBackpressure as i32 => ActionReplyStatus::StreamBackpressure,
+        s if s == ActionStatus::ActionStreamBackpressure as i32 => {
+            ActionReplyStatus::StreamBackpressure
+        }
         _ => ActionReplyStatus::Error,
     }
 }
@@ -672,9 +678,6 @@ mod tests {
             map_action_status(Status::ActionStreamBackpressure as i32),
             ActionReplyStatus::StreamBackpressure
         ));
-        assert!(matches!(
-            map_action_status(999),
-            ActionReplyStatus::Error
-        ));
+        assert!(matches!(map_action_status(999), ActionReplyStatus::Error));
     }
 }

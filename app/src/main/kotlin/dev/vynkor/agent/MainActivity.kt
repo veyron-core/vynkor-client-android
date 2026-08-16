@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -13,15 +15,33 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import dev.vynkor.agent.agent.AgentHolder
 import dev.vynkor.agent.agent.AgentService
+import dev.vynkor.agent.agent.DeviceIdentity
 import dev.vynkor.agent.agent.HostProfile
+import dev.vynkor.agent.agent.PairingPayload
 import dev.vynkor.agent.agent.ProfileStore
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var adapter: ProfileAdapter
+
+    private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
+        if (result.contents == null) {
+            Toast.makeText(this, R.string.scan_cancelled, Toast.LENGTH_SHORT).show()
+        } else {
+            onPairingPayload(result.contents!!)
+        }
+    }
+
+    private val cameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) launchScanner()
+            else Toast.makeText(this, R.string.scan_cancelled, Toast.LENGTH_SHORT).show()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +53,7 @@ class MainActivity : AppCompatActivity() {
         val activeHost = findViewById<TextView>(R.id.activeHost)
         val connect = findViewById<Button>(R.id.connect)
         val chat = findViewById<Button>(R.id.chat)
+        val scan = findViewById<Button>(R.id.scan)
         val profiles = findViewById<RecyclerView>(R.id.profiles)
         val add = findViewById<FloatingActionButton>(R.id.addProfile)
 
@@ -72,6 +93,16 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ChatActivity::class.java))
         }
 
+        scan.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                launchScanner()
+            } else {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+
         lifecycleScope.launch {
             AgentHolder.connectionState.collect { connected ->
                 statusDot.setTextColor(
@@ -80,6 +111,39 @@ class MainActivity : AppCompatActivity() {
                 statusText.setText(if (connected) R.string.status_connected else R.string.status_disconnected)
                 connect.setText(if (connected) R.string.disconnect_button else R.string.connect_button)
             }
+        }
+
+        intent?.data?.let { onPairingPayload(it.toString()) }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.data?.let { onPairingPayload(it.toString()) }
+    }
+
+    private fun launchScanner() {
+        scanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt(getString(R.string.scan_prompt))
+        )
+    }
+
+    private fun onPairingPayload(raw: String) {
+        val profile = PairingPayload.parse(raw)
+        if (profile == null) {
+            Toast.makeText(this, R.string.scan_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+        DeviceIdentity.setDeviceId(this, profile.deviceId)
+        ProfileStore.save(this, profile)
+        ProfileStore.setActive(this, profile.id)
+        refresh()
+        Toast.makeText(this, getString(R.string.paired_and_connected, profile.name), Toast.LENGTH_SHORT).show()
+        if (AgentHolder.agent == null) {
+            requestPermissions()
+            AgentService.start(this)
         }
     }
 
