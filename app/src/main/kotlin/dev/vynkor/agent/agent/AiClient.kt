@@ -30,8 +30,8 @@ object AiClient {
         }
         val params = JSONObject().apply {
             put("provider", profile.aiProvider)
-            if (profile.aiBaseUrl.isNotBlank()) put("base_url", profile.aiBaseUrl)
-            put("model", profile.aiModel)
+            if (profile.effectiveBaseUrl().isNotBlank()) put("base_url", profile.effectiveBaseUrl())
+            put("model", profile.effectiveModel())
             put("api_key_env", profile.aiApiKeyEnv)
             put("messages", msgs)
             put("max_tokens", 1024)

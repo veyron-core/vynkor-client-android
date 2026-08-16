@@ -1,12 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#2F6BFF</color>
+
     <color name="primary">#2F6BFF</color>
     <color name="primary_dark">#1E4FD8</color>
-    <color name="surface_bubble">#EEF1F6</color>
+    <color name="primary_container">#DCE5FF</color>
     <color name="on_primary">#FFFFFF</color>
+    <color name="on_primary_container">#00174A</color>
+
+    <color name="secondary">#4A5D92</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="secondary_container">#DCE1F9</color>
+    <color name="on_secondary_container">#131B2F</color>
+
+    <color name="background">#FAFAFE</color>
+    <color name="on_background">#1A1B21</color>
+    <color name="surface">#FAFAFE</color>
     <color name="on_surface">#1B1B1F</color>
+    <color name="surface_variant">#E2E3EC</color>
+    <color name="on_surface_variant">#44464F</color>
+
+    <color name="surface_container_low">#F3F3FA</color>
+    <color name="surface_container">#EEEEF4</color>
+    <color name="surface_container_high">#E9E9EF</color>
+    <color name="surface_container_highest">#E3E3EA</color>
+
+    <color name="surface_bubble">#EEF1F6</color>
+    <color name="outline">#75777F</color>
+    <color name="outline_variant">#C5C6D0</color>
+
     <color name="error">#B3261E</color>
+    <color name="on_error">#FFFFFF</color>
+    <color name="error_container">#F9DEDC</color>
+    <color name="on_error_container">#410E0B</color>
+
     <color name="connected">#2E7D32</color>
     <color name="disconnected">#9E9E9E</color>
 </resources>

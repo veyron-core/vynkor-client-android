@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         chat.setOnClickListener {
-            startActivity(Intent(this, ChatActivity::class.java))
+            startActivity(Intent(this, ChatListActivity::class.java))
         }
 
         scan.setOnClickListener {
@@ -153,8 +153,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        adapter.submit(ProfileStore.list(this))
         val active = ProfileStore.active(this)
+        adapter.submit(ProfileStore.list(this), active?.id)
         findViewById<TextView>(R.id.activeName).text =
             active?.name?.ifBlank { getString(R.string.unnamed_profile) } ?: getString(R.string.no_profile)
         findViewById<TextView>(R.id.activeHost).text = active?.hostUrl ?: ""

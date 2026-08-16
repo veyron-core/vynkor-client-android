@@ -63,7 +63,7 @@ class AgentService : Service() {
             ),
             osVersion = Build.VERSION.RELEASE,
             arch = android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown",
-            userId = "default",
+            userId = profile.userId.ifBlank { "default" },
         )
         val a = Agent(config)
         a.setBattery(BatteryProviderImpl(this))
