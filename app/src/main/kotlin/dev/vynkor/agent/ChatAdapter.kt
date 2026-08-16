@@ -12,20 +12,22 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import dev.vynkor.agent.agent.ChatMessage
 import io.noties.markwon.Markwon
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class ChatAdapter(
+    private val onUserLongPress: (ChatMessage, View) -> Unit,
     private val onCopy: (ChatMessage) -> Unit,
+    private val onMore: (ChatMessage, View) -> Unit,
     private val onSpeak: (ChatMessage) -> Unit,
 ) : RecyclerView.Adapter<ChatAdapter.Holder>() {
 
     private var items: MutableList<ChatMessage> = mutableListOf()
     private var speaking: ChatMessage? = null
 
+    // NOTE: copy, not alias — the caller owns `chat.messages` and also adds to
+    // it in appendMessage; sharing the same MutableList would double every
+    // message (chat.messages.add + items.add on one list).
     fun submit(messages: MutableList<ChatMessage>) {
-        items = messages
+        items = messages.toMutableList()
         speaking = null
         notifyDataSetChanged()
     }
@@ -63,16 +65,13 @@ class ChatAdapter(
         private val ctx = view.context
         private val bubble: View = view.findViewById(R.id.bubble)
         private val text: TextView = view.findViewById(R.id.messageText)
-        private val time: TextView = view.findViewById(R.id.messageTime)
+        private val footerRow: View = view.findViewById(R.id.footerRow)
         private val copy: ImageButton = view.findViewById(R.id.copyAction)
+        private val more: ImageButton = view.findViewById(R.id.moreAction)
         private val speak: ImageButton = view.findViewById(R.id.speakAction)
         private var markwon: Markwon? = null
-        private val timeFormat =
-            SimpleDateFormat(ctx.getString(R.string.time_format_today), Locale.getDefault())
 
         fun bind(message: ChatMessage, isSpeaking: Boolean) {
-            time.text = timeFormat.format(Date(message.timestamp))
-
             val lp = bubble.layoutParams as FrameLayout.LayoutParams
             when (message.role) {
                 "user" -> {
@@ -81,10 +80,11 @@ class ChatAdapter(
                     markwon().setMarkdown(text, message.content)
                     val onPrimary = color(R.color.on_primary)
                     text.setTextColor(onPrimary)
-                    time.setTextColor(onPrimary)
-                    copy.visibility = View.VISIBLE
-                    copy.imageTintList = ColorStateList.valueOf(onPrimary)
-                    speak.visibility = View.GONE
+                    footerRow.visibility = View.GONE
+                    itemView.setOnLongClickListener {
+                        onUserLongPress(message, itemView)
+                        true
+                    }
                 }
                 "error" -> {
                     lp.gravity = Gravity.CENTER
@@ -92,29 +92,34 @@ class ChatAdapter(
                     text.text = message.content
                     val error = color(R.color.error)
                     text.setTextColor(error)
-                    time.setTextColor(error)
-                    copy.visibility = View.GONE
-                    speak.visibility = View.GONE
+                    footerRow.visibility = View.GONE
+                    itemView.setOnLongClickListener(null)
                 }
                 else -> {
                     lp.gravity = Gravity.START
                     bubble.setBackgroundResource(R.drawable.bubble_assistant)
                     markwon().setMarkdown(text, message.content)
                     text.setTextColor(color(R.color.on_surface))
-                    time.setTextColor(color(R.color.on_surface_variant))
+                    footerRow.visibility = View.VISIBLE
                     copy.visibility = View.VISIBLE
-                    copy.imageTintList = ColorStateList.valueOf(color(R.color.on_surface_variant))
+                    more.visibility = View.VISIBLE
                     speak.visibility = View.VISIBLE
-                    speak.imageTintList = ColorStateList.valueOf(color(R.color.on_surface_variant))
-                    speak.contentDescription = ctx.getString(
-                        if (isSpeaking) R.string.stop_speak else R.string.speak_message
+                    val tint = color(R.color.on_surface_variant)
+                    copy.imageTintList = ColorStateList.valueOf(tint)
+                    more.imageTintList = ColorStateList.valueOf(tint)
+                    speak.imageTintList = ColorStateList.valueOf(
+                        if (isSpeaking) color(R.color.primary) else tint,
                     )
+                    speak.contentDescription = ctx.getString(
+                        if (isSpeaking) R.string.stop_speak else R.string.speak_message,
+                    )
+                    copy.setOnClickListener { onCopy(message) }
+                    more.setOnClickListener { onMore(message, more) }
+                    speak.setOnClickListener { onSpeak(message) }
+                    itemView.setOnLongClickListener(null)
                 }
             }
             bubble.layoutParams = lp
-
-            copy.setOnClickListener { onCopy(message) }
-            speak.setOnClickListener { onSpeak(message) }
         }
 
         private fun markwon(): Markwon = markwon ?: Markwon.create(ctx).also { markwon = it }

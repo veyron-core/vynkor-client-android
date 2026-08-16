@@ -6,13 +6,13 @@
     android:paddingTop="4dp"
     android:paddingBottom="4dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bubble"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
         android:background="@drawable/bubble_assistant"
-        android:orientation="vertical"
+        android:maxWidth="304dp"
         android:padding="12dp">
 
         <TextView
@@ -21,22 +21,26 @@
             android:layout_height="wrap_content"
             android:maxWidth="280dp"
             android:textAppearance="?attr/textAppearanceBodyLarge"
-            android:textColor="@color/on_surface" />
+            android:textColor="@color/on_surface"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
+        <!-- Assistant-only action footer: copy + more on the left, the speaker
+             pinned to the right edge of the bubble. Hidden for user/error. -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/footerRow"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="4dp"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/messageTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="@color/on_surface_variant" />
+            android:minWidth="96dp"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="@id/messageText"
+            app:layout_constraintStart_toStartOf="@id/messageText"
+            app:layout_constraintTop_toBottomOf="@id/messageText">
 
             <ImageButton
                 android:id="@+id/copyAction"
@@ -51,6 +55,23 @@
                 android:visibility="gone" />
 
             <ImageButton
+                android:id="@+id/moreAction"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/message_fork"
+                android:padding="5dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_more_vert"
+                android:tint="@color/on_surface_variant"
+                android:visibility="gone" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <ImageButton
                 android:id="@+id/speakAction"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
@@ -62,5 +83,5 @@
                 android:tint="@color/on_surface_variant"
                 android:visibility="gone" />
         </LinearLayout>
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>
