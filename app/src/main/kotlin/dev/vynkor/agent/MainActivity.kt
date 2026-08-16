@@ -1,65 +1,99 @@
 package dev.vynkor.agent
 
 import android.Manifest
-import android.app.Activity
-import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import dev.vynkor.agent.agent.AgentConfigStore
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dev.vynkor.agent.agent.AgentHolder
 import dev.vynkor.agent.agent.AgentService
+import dev.vynkor.agent.agent.HostProfile
+import dev.vynkor.agent.agent.ProfileStore
+import kotlinx.coroutines.launch
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var adapter: ProfileAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val hostUrl = findViewById<EditText>(R.id.hostUrl)
-        val jwt = findViewById<EditText>(R.id.jwt)
-        val secret = findViewById<EditText>(R.id.secret)
-        val deviceId = findViewById<EditText>(R.id.deviceId)
-        val status = findViewById<TextView>(R.id.status)
+        val statusText = findViewById<TextView>(R.id.statusText)
+        val statusDot = findViewById<TextView>(R.id.statusDot)
+        val activeName = findViewById<TextView>(R.id.activeName)
+        val activeHost = findViewById<TextView>(R.id.activeHost)
         val connect = findViewById<Button>(R.id.connect)
-        val notificationButton = findViewById<Button>(R.id.notificationAccess)
+        val chat = findViewById<Button>(R.id.chat)
+        val profiles = findViewById<RecyclerView>(R.id.profiles)
+        val add = findViewById<FloatingActionButton>(R.id.addProfile)
 
-        hostUrl.setText(AgentConfigStore.hostUrl(this))
-        jwt.setText(AgentConfigStore.jwtToken(this))
-        secret.setText(AgentConfigStore.jwtSecret(this))
-        deviceId.setText(dev.vynkor.agent.agent.DeviceIdentity.deviceId(this))
+        adapter = ProfileAdapter(
+            onSelect = { profile ->
+                ProfileStore.setActive(this, profile.id)
+                refresh()
+            },
+            onEdit = { profile ->
+                startActivity(
+                    Intent(this, ProfileActivity::class.java)
+                        .putExtra(ProfileActivity.EXTRA_PROFILE_ID, profile.id)
+                )
+            },
+            onDelete = { profile ->
+                ProfileStore.delete(this, profile.id)
+                refresh()
+            },
+        )
+        profiles.layoutManager = LinearLayoutManager(this)
+        profiles.adapter = adapter
 
-        connect.setOnClickListener {
-            AgentConfigStore.save(
-                this,
-                hostUrl.text.toString(),
-                jwt.text.toString(),
-                secret.text.toString(),
-            )
-            // must match the minted JWT sub claim
-            dev.vynkor.agent.agent.DeviceIdentity.setDeviceId(this, deviceId.text.toString())
-            requestPermissions()
-            AgentService.start(this)
-            status.text = getString(R.string.status_connecting)
+        add.setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
         }
 
-        notificationButton.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        connect.setOnClickListener {
+            if (AgentHolder.agent != null) {
+                AgentService.stop(this)
+            } else {
+                requestPermissions()
+                AgentService.start(this)
+            }
+        }
+
+        chat.setOnClickListener {
+            startActivity(Intent(this, ChatActivity::class.java))
+        }
+
+        lifecycleScope.launch {
+            AgentHolder.connectionState.collect { connected ->
+                statusDot.setTextColor(
+                    ContextCompat.getColor(this@MainActivity, if (connected) R.color.connected else R.color.disconnected)
+                )
+                statusText.setText(if (connected) R.string.status_connected else R.string.status_disconnected)
+                connect.setText(if (connected) R.string.disconnect_button else R.string.connect_button)
+            }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        val connected = AgentHolder.agent?.isConnected() == true
-        findViewById<TextView>(R.id.status).text =
-            getString(if (connected) R.string.status_connected else R.string.status_disconnected)
+        refresh()
+    }
+
+    private fun refresh() {
+        adapter.submit(ProfileStore.list(this))
+        val active = ProfileStore.active(this)
+        findViewById<TextView>(R.id.activeName).text =
+            active?.name?.ifBlank { getString(R.string.unnamed_profile) } ?: getString(R.string.no_profile)
+        findViewById<TextView>(R.id.activeHost).text = active?.hostUrl ?: ""
     }
 
     private fun requestPermissions() {

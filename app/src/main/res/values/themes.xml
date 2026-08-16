@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Vynkor" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Vynkor" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorError">@color/error</item>
+    </style>
 </resources>

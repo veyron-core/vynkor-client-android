@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.util.Log
 import dev.vynkor.agent.Agent
 import dev.vynkor.agent.AgentConfig
+import dev.vynkor.agent.AgentObserver
 import dev.vynkor.agent.MainActivity
 import dev.vynkor.agent.R
 import dev.vynkor.agent.caps.BatteryProviderImpl
@@ -20,7 +21,7 @@ import dev.vynkor.agent.caps.ContactsProviderImpl
 import dev.vynkor.agent.caps.LocationProviderImpl
 import dev.vynkor.agent.caps.SpeakerSinkImpl
 
-/** Foreground service holding the agent connection. One per host. */
+/** Foreground service holding the agent connection. One per active host. */
 class AgentService : Service() {
     private var agent: Agent? = null
     private val micCapture = MicCapture()
@@ -45,20 +46,19 @@ class AgentService : Service() {
 
     private fun startAgent() {
         if (agent != null) return
-        val deviceId = DeviceIdentity.deviceId(this)
-        val hostUrl = AgentConfigStore.hostUrl(this)
-        if (hostUrl.isBlank()) {
+        val profile = ProfileStore.active(this)
+        if (profile == null || profile.hostUrl.isBlank()) {
             Log.w(TAG, "no host configured, stopping")
             stopSelf()
             return
         }
         val config = AgentConfig(
-            hostUrl = hostUrl,
-            jwtToken = AgentConfigStore.jwtToken(this),
-            jwtSecret = AgentConfigStore.jwtSecret(this),
-            deviceId = deviceId,
+            hostUrl = profile.hostUrl,
+            jwtToken = profile.jwtToken,
+            jwtSecret = profile.jwtSecret,
+            deviceId = profile.deviceId,
             capabilities = listOf(
-                "geo", "battery", "notifications", "clipboard", "contacts", "mic", "speaker"
+                "geo", "battery", "notifications", "clipboard", "contacts", "mic", "speaker", "chat"
             ),
             osVersion = Build.VERSION.RELEASE,
             arch = android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown",
@@ -70,6 +70,11 @@ class AgentService : Service() {
         a.setClipboard(ClipboardProviderImpl(this))
         a.setContacts(ContactsProviderImpl(this))
         a.setSpeaker(SpeakerSinkImpl())
+        a.setObserver(object : AgentObserver {
+            override fun onStateChanged(connected: Boolean) {
+                AgentHolder.connectionState.value = connected
+            }
+        })
         agent = a
         AgentHolder.agent = a
         a.start()
@@ -81,6 +86,7 @@ class AgentService : Service() {
         agent?.stop()
         agent = null
         AgentHolder.agent = null
+        AgentHolder.connectionState.value = false
     }
 
     override fun onDestroy() {

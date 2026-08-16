@@ -56,6 +56,11 @@ dependencies {
     // lands in the APK (libjnidispatch is packaged per-ABI in the AAR).
     implementation("net.java.dev.jna:jna:5.15.0@aar")
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }
 
 // Build the Rust core with cargo-ndk and copy the .so files next to the
