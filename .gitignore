@@ -1,1 +1,9 @@
 /rust/target/
+/app/build/
+/.gradle/
+/build/
+/local.properties
+*.apk
+*.aab
+.idea/
+*.iml

@@ -11,6 +11,7 @@ uniffi::setup_scaffolding!();
 
 pub mod agent;
 pub mod caps;
+pub mod error;
 pub mod ffi;
 pub mod protocol;
 pub mod transport;
