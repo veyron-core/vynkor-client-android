@@ -41,6 +41,12 @@ android {
         buildConfig = true
     }
 
+    androidResources {
+        // Keep .onnx model files uncompressed so sherpa-onnx can read them
+        // straight from the asset manager.
+        noCompress += "onnx"
+    }
+
     sourceSets {
         getByName("main") {
             // generated Kotlin bindings + jniLibs land here
@@ -55,12 +61,17 @@ dependencies {
     // Use the AAR, not the JAR: the JAR's native libjnidispatch.so never
     // lands in the APK (libjnidispatch is packaged per-ABI in the AAR).
     implementation("net.java.dev.jna:jna:5.15.0@aar")
+    implementation("io.noties.markwon:core:4.6.2")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // QR pairing: scan the host's `vynkor://pair` QR to fill a profile.
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    // On-device speech-to-text (local models in app/src/main/assets/stt/).
+    implementation(files("libs/sherpa-onnx-1.13.5.aar"))
 }
 
 // Build the Rust core with cargo-ndk and copy the .so files next to the

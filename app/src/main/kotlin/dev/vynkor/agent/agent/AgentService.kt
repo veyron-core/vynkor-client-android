@@ -56,13 +56,14 @@ class AgentService : Service() {
             hostUrl = profile.hostUrl,
             jwtToken = profile.jwtToken,
             jwtSecret = profile.jwtSecret,
+            certPem = profile.certPem,
             deviceId = profile.deviceId,
             capabilities = listOf(
                 "geo", "battery", "notifications", "clipboard", "contacts", "mic", "speaker", "chat"
             ),
             osVersion = Build.VERSION.RELEASE,
             arch = android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown",
-            userId = "default",
+            userId = profile.userId.ifBlank { "default" },
         )
         val a = Agent(config)
         a.setBattery(BatteryProviderImpl(this))

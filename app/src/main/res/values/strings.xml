@@ -12,34 +12,80 @@
     <string name="status_connected">Connected</string>
     <string name="connect_button">Connect</string>
     <string name="disconnect_button">Disconnect</string>
-    <string name="chat_button">Chat</string>
+    <string name="scan_button">Scan QR</string>
+    <string name="scan_prompt">Point at the host\'s pairing QR (vyn device connect)</string>
+    <string name="scan_cancelled">Scan cancelled</string>
+    <string name="scan_invalid">Not a vynkor pairing QR</string>
+    <string name="paired_and_connected">Paired with %1$s</string>
     <string name="no_profile">No profile</string>
     <string name="unnamed_profile">Unnamed</string>
 
     <string name="profiles_title">Hosts</string>
+    <string name="settings_title">Settings</string>
     <string name="add_profile">Add host</string>
     <string name="edit_profile">Edit</string>
     <string name="delete_profile">Delete</string>
+    <string name="active_profile_label">Active</string>
 
     <string name="profile_title">Host profile</string>
     <string name="profile_name_hint">Profile name</string>
     <string name="host_url_hint">Host URL (wss://host:port)</string>
     <string name="device_id_hint">Device ID (must match JWT sub)</string>
+    <string name="user_id_hint">User ID</string>
     <string name="device_token_hint">Device JWT</string>
     <string name="host_secret_hint">Host jwt_secret</string>
     <string name="save_button">Save</string>
     <string name="host_url_required">Host URL is required</string>
-
-    <string name="ai_section">AI plugin</string>
-    <string name="ai_section_body">Settings for the host\'s ai plugin (chat_completion). The API key never leaves the host — send the name of its env var.</string>
+    <string name="model_fallback">llama3.2</string>
     <string name="ai_model_hint">Model id (e.g. claude-sonnet-5, llama3)</string>
-    <string name="ai_base_url_hint">Base URL (required for openai, e.g. http://localhost:11434/v1)</string>
-    <string name="ai_api_key_env_hint">API key env var name (host-side)</string>
+
+    <string name="chats_title">Chats</string>
+    <string name="new_chat">New chat</string>
+    <string name="empty_chats">No chats yet. Tap + to start one.</string>
+    <string name="open_drawer">Open menu</string>
+    <string name="no_host_title">No host configured</string>
+    <string name="no_host_body">Add a host to start chatting</string>
+    <string name="set_up_host">Set up host</string>
+    <string name="rename_chat">Rename</string>
+    <string name="rename_chat_hint">Chat title</string>
+    <string name="delete_chat">Delete</string>
+    <string name="delete_chat_confirm">Delete this chat? This cannot be undone.</string>
+    <string name="cancel">Cancel</string>
 
     <string name="chat_input_hint">Message…</string>
     <string name="send_button">Send</string>
     <string name="clear_button">Clear</string>
+    <string name="welcome_title">What can I help with?</string>
+    <string name="welcome_body">Send a message or use the mic — it goes to your host\'s AI.</string>
+    <string name="welcome_suggest_1">What can you do?</string>
+    <string name="welcome_suggest_2">Tell me a joke</string>
+    <string name="welcome_suggest_3">Help me with code</string>
+    <string name="model_picker_title">Model</string>
+    <string name="custom_model">Custom model…</string>
+    <string name="model_switched">Model: %1$s</string>
+    <string name="agent_picker_title">Agent</string>
+    <string name="agent_switched">Agent: %1$s</string>
+    <string name="agent_fallback">Agent</string>
     <string name="not_connected">Not connected to a host</string>
     <string name="ai_not_configured">AI model or api_key_env not set in this host profile</string>
     <string name="ai_error">AI request failed</string>
+    <string name="typing">Typing…</string>
+    <string name="copied">Copied</string>
+    <string name="copy_message">Copy message</string>
+    <string name="speak_message">Read aloud</string>
+    <string name="stop_speak">Stop reading</string>
+    <string name="message_fork">Create branch in new chat</string>
+    <string name="message_gmail_draft">Create Gmail draft</string>
+    <string name="message_export_docs">Export to Docs</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="fork_created">Branch created</string>
+    <string name="tts_playing">Speaking…</string>
+    <string name="stop_tts">Stop</string>
+    <string name="back">Back</string>
+
+    <string name="mic_button">Voice input</string>
+    <string name="mic_listening">Listening… tap to stop</string>
+    <string name="stt_not_ready">Speech model not ready yet</string>
+    <string name="mic_permission_denied">Microphone permission denied</string>
+    <string name="mic_start_failed">Could not start recording</string>
 </resources>

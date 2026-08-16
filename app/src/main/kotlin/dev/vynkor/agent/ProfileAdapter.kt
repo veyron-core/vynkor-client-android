@@ -15,9 +15,11 @@ class ProfileAdapter(
 ) : RecyclerView.Adapter<ProfileAdapter.Holder>() {
 
     private var items: List<HostProfile> = emptyList()
+    private var activeId: String? = null
 
-    fun submit(list: List<HostProfile>) {
+    fun submit(list: List<HostProfile>, activeId: String?) {
         items = list
+        this.activeId = activeId
         notifyDataSetChanged()
     }
 
@@ -36,12 +38,14 @@ class ProfileAdapter(
     inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
         private val name: TextView = view.findViewById(R.id.profileName)
         private val host: TextView = view.findViewById(R.id.profileHost)
+        private val active: TextView = view.findViewById(R.id.profileActive)
         private val edit: ImageButton = view.findViewById(R.id.profileEdit)
         private val delete: ImageButton = view.findViewById(R.id.profileDelete)
 
         fun bind(profile: HostProfile) {
             name.text = profile.name.ifBlank { name.context.getString(R.string.unnamed_profile) }
             host.text = profile.hostUrl
+            active.visibility = if (profile.id == activeId) View.VISIBLE else View.GONE
             edit.setOnClickListener { onEdit(profile) }
             delete.setOnClickListener { onDelete(profile) }
             itemView.setOnClickListener { onSelect(profile) }

@@ -16,6 +16,9 @@ pub struct AgentConfig {
     pub jwt_token: String,
     /// Host's `jwt_secret`, for frame-MAC key derivation.
     pub jwt_secret: String,
+    /// Host's served TLS cert (PEM) to pin when `host_url` is `wss://` and the
+    /// cert is self-signed. Empty = verify against webpki-roots only.
+    pub cert_pem: String,
     /// Stable per-install UUID.
     pub device_id: String,
     /// Capabilities to register, e.g.
