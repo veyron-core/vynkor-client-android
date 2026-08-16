@@ -19,12 +19,20 @@ class SttRecorder {
 
     private var audioRecord: AudioRecord? = null
     private var recordThread: Thread? = null
+    private var onChunk: ((FloatArray) -> Unit)? = null
     private val samples = ArrayList<Short>()
 
     fun isRecording(): Boolean = recording
 
-    fun start() {
+    /**
+     * Starts recording. Every read chunk is converted to a FloatArray in
+     * [-1, 1] and passed to [onChunk] on the recorder thread (used by the
+     * streaming STT path); all samples are still buffered so [stop] can
+     * return the full recording.
+     */
+    fun start(onChunk: ((FloatArray) -> Unit)? = null) {
         if (recording) return
+        this.onChunk = onChunk
         val minBuf = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -57,6 +65,7 @@ class SttRecorder {
     fun stop(): FloatArray {
         if (!recording) return FloatArray(0)
         recording = false
+        onChunk = null
         val record = audioRecord ?: return FloatArray(0)
         try {
             recordThread?.join(JOIN_TIMEOUT_MS)
@@ -86,6 +95,9 @@ class SttRecorder {
                 synchronized(samples) {
                     for (i in 0 until read) samples.add(buffer[i])
                 }
+                onChunk?.invoke(
+                    FloatArray(read) { i -> buffer[i] / 32768.0f },
+                )
             }
         } catch (t: Throwable) {
             Log.e(TAG, "mic read failed", t)

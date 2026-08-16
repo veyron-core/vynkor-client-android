@@ -14,12 +14,19 @@ import java.util.concurrent.Executors
 /**
  * Process-wide, lazy on-device speech-to-text engine backed by sherpa-onnx.
  *
+ * The bundled `zipformer-ru-int8` model is **offline-only** — its metadata
+ * lacks the streaming `encoder_dims`, so `OnlineRecognizer` rejects it. "Live"
+ * dictation is therefore emulated: audio accumulates in an [SttSession] and
+ * [partial] re-decodes everything spoken so far (the caller throttles it to
+ * ~1 s), producing a near-real-time transcript that grows while the user
+ * speaks. [finish] returns the final text and frees the session.
+ *
  * The recognizer construction is slow (seconds), so [ensureLoaded] performs
  * it exactly once on a background loader thread. The `onReady` callback is
  * always invoked on that loader thread once loading settles (success or
  * failure) — callers must check [isReady] and hop to the main thread for any
- * UI work. [transcribe] is blocking and CPU-bound: callers must invoke it on
- * their own IO dispatcher.
+ * UI work. All decode methods are blocking and CPU-bound: call them on
+ * `Dispatchers.IO`, never the main thread.
  */
 class SttEngine private constructor(context: Context) {
 
@@ -61,14 +68,41 @@ class SttEngine private constructor(context: Context) {
         if (start) loader.execute { loadModel() }
     }
 
+    /** Opens a new dictation session. Null when the model is not loaded. */
+    fun newSession(): SttSession? = if (isReady()) SttSession() else null
+
+    /** Appends a chunk of 16 kHz mono samples in [-1, 1]. Cheap, any thread. */
+    fun feed(session: SttSession, chunk: FloatArray) {
+        if (chunk.isEmpty()) return
+        synchronized(session.lock) {
+            if (session.finished) return
+            for (s in chunk) session.samples.add(s)
+        }
+    }
+
     /**
-     * Blocking, CPU-bound transcription of 16 kHz mono samples in [-1, 1].
-     * Returns "" when the model is not loaded or transcription fails.
-     * MUST be called on Dispatchers.IO, never on the main thread.
+     * Decodes everything spoken so far and returns the current transcript
+     * (grows as the user keeps talking). CPU-bound: call on Dispatchers.IO.
      */
-    fun transcribe(samples: FloatArray): String {
-        if (samples.isEmpty()) return ""
+    fun partial(session: SttSession): String = transcribe(session)
+
+    /**
+     * Marks the session done, returns the final transcript and frees the
+     * accumulated audio. CPU-bound: call on Dispatchers.IO.
+     */
+    fun finish(session: SttSession): String {
+        synchronized(session.lock) { session.finished = true }
+        val text = transcribe(session)
+        synchronized(session.lock) { session.samples.clear() }
+        return text
+    }
+
+    private fun transcribe(session: SttSession): String {
         val rec = recognizer ?: return ""
+        val samples = synchronized(session.lock) {
+            if (session.samples.isEmpty()) FloatArray(0) else session.samples.toFloatArray()
+        }
+        if (samples.isEmpty()) return ""
         return try {
             val stream: OfflineStream = rec.createStream()
             try {
@@ -136,4 +170,15 @@ class SttEngine private constructor(context: Context) {
                 instance ?: SttEngine(context.applicationContext).also { instance = it }
             }
     }
+}
+
+/**
+ * One dictation session: the audio accumulated so far. Fed from the recorder
+ * thread, decoded on an IO thread; [SttSession.finished] stops further
+ * accumulation after [SttEngine.finish].
+ */
+class SttSession internal constructor() {
+    internal val lock = Any()
+    internal val samples = ArrayList<Float>()
+    internal var finished = false
 }
