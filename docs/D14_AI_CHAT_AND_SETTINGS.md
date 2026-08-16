@@ -124,6 +124,19 @@ Wi-Fi, Ollama (`llama3.2:3b`) running locally on the host.
 
 ## Follow-ups (deferred)
 
+- **`ai` plugin model discovery — IMPLEMENTED (ai-plugin v0.3, 2026-08-16).**
+  The manual per-profile AI section was removed from the app; the `ai` plugin
+  now keeps a SQLite store (`<data_dir>/plugins/ai/ai.db`) with models,
+  agent profiles and token usage. Models come from `AI_PLUGIN_MODELS`
+  (declared, required for Anthropic) or `AI_PLUGIN_DISCOVERY`
+  (auto-pulled from Ollama `/api/tags` / OpenAI `/models` at startup and via
+  the `refresh_models` action). Agents (`AI_PLUGIN_AGENTS`) are named
+  profiles with model + system prompt + goal + description. The client calls
+  `list_models`/`list_agents` after connecting and names models/agents by
+  id; provider/base_url/api_key_env no longer travel from the phone.
+  Analytics: every completion records input/output tokens
+  (`usage` table); `usage_stats` aggregates by model/agent. Requires a
+  kernel that grants `VEYRON_DATA_DIR` (veyron: supervisor `set_data_dir`).
 - Voice pipeline (mic→STT→AI→TTS) — caps exist, pipeline missing.
 - TLS cert pinning (still `tls: false` for LAN tests).
 - `user_id` per profile (hardcoded `"default"`).
