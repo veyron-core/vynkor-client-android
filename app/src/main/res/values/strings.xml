@@ -36,22 +36,8 @@
     <string name="host_secret_hint">Host jwt_secret</string>
     <string name="save_button">Save</string>
     <string name="host_url_required">Host URL is required</string>
-
-    <string name="ai_section">AI plugin</string>
-    <string name="ai_section_body">Settings for the host\'s ai plugin (chat_completion). The API key never leaves the host — send the name of its env var.</string>
-    <string name="ai_provider_label">Provider</string>
-    <string name="ai_model_hint">Model id (e.g. claude-sonnet-5, llama3)</string>
-    <string name="ai_base_url_hint">Base URL (required for openai, e.g. http://localhost:11434/v1)</string>
-    <string name="ai_api_key_env_hint">API key env var name (host-side)</string>
-    <string name="suggested_models">Suggested models</string>
-    <string name="model_suggest_llama32">llama3.2</string>
-    <string name="model_suggest_llama31">llama3.1</string>
-    <string name="model_suggest_gpt4o_mini">gpt-4o-mini</string>
-    <string name="model_suggest_claude_sonnet">claude-sonnet-4-5</string>
-    <string name="model_suggest_claude_haiku">claude-haiku-4-5</string>
     <string name="model_fallback">llama3.2</string>
-    <string name="default_ai_base_url">http://localhost:11434/v1</string>
-    <string name="default_api_key_env">OLLAMA_API_KEY</string>
+    <string name="ai_model_hint">Model id (e.g. claude-sonnet-5, llama3)</string>
 
     <string name="chats_title">Chats</string>
     <string name="new_chat">New chat</string>
@@ -69,6 +55,17 @@
     <string name="chat_input_hint">Message…</string>
     <string name="send_button">Send</string>
     <string name="clear_button">Clear</string>
+    <string name="welcome_title">What can I help with?</string>
+    <string name="welcome_body">Send a message or use the mic — it goes to your host\'s AI.</string>
+    <string name="welcome_suggest_1">What can you do?</string>
+    <string name="welcome_suggest_2">Tell me a joke</string>
+    <string name="welcome_suggest_3">Help me with code</string>
+    <string name="model_picker_title">Model</string>
+    <string name="custom_model">Custom model…</string>
+    <string name="model_switched">Model: %1$s</string>
+    <string name="agent_picker_title">Agent</string>
+    <string name="agent_switched">Agent: %1$s</string>
+    <string name="agent_fallback">Agent</string>
     <string name="not_connected">Not connected to a host</string>
     <string name="ai_not_configured">AI model or api_key_env not set in this host profile</string>
     <string name="ai_error">AI request failed</string>
@@ -77,6 +74,13 @@
     <string name="copy_message">Copy message</string>
     <string name="speak_message">Read aloud</string>
     <string name="stop_speak">Stop reading</string>
+    <string name="message_fork">Create branch in new chat</string>
+    <string name="message_gmail_draft">Create Gmail draft</string>
+    <string name="message_export_docs">Export to Docs</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="fork_created">Branch created</string>
+    <string name="tts_playing">Speaking…</string>
+    <string name="stop_tts">Stop</string>
     <string name="back">Back</string>
 
     <string name="mic_button">Voice input</string>
@@ -84,7 +88,4 @@
     <string name="stt_not_ready">Speech model not ready yet</string>
     <string name="mic_permission_denied">Microphone permission denied</string>
     <string name="mic_start_failed">Could not start recording</string>
-
-    <string name="time_format_today">HH:mm</string>
-    <string name="time_format_date">MMM d</string>
 </resources>
