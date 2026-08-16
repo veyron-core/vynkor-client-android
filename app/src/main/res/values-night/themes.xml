@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Night variant of Theme.Vynkor. A style in values-night REPLACES the
+         base one entirely (no cross-config merge), so every item from the
+         light theme must be repeated here; only windowLightStatusBar differs
+         (dark surface -> light icons). Colors resolve per-night via
+         values-night/colors.xml. -->
     <style name="Theme.Vynkor" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@color/surface</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_container</item>
