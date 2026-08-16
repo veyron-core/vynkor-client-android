@@ -16,9 +16,19 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <ImageButton
+                android:id="@+id/back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/back"
+                android:src="@drawable/ic_back"
+                app:tint="?attr/colorOnSurface" />
+
             <ImageView
                 android:layout_width="28dp"
                 android:layout_height="28dp"
+                android:layout_marginStart="4dp"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_stat_vynkor"
                 app:tint="@color/primary" />
@@ -27,7 +37,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:text="@string/app_title"
+                android:text="@string/settings_title"
                 android:textAppearance="?attr/textAppearanceHeadlineSmall"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -95,15 +105,6 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/connect_button" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/chat"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:text="@string/chats_button"
-                        app:icon="@drawable/ic_chat" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/scan"

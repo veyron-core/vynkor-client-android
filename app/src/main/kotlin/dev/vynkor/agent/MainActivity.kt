@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,10 +53,11 @@ class MainActivity : AppCompatActivity() {
         val activeName = findViewById<TextView>(R.id.activeName)
         val activeHost = findViewById<TextView>(R.id.activeHost)
         val connect = findViewById<Button>(R.id.connect)
-        val chat = findViewById<Button>(R.id.chat)
         val scan = findViewById<Button>(R.id.scan)
         val profiles = findViewById<RecyclerView>(R.id.profiles)
         val add = findViewById<FloatingActionButton>(R.id.addProfile)
+
+        findViewById<ImageButton>(R.id.back).setOnClickListener { finish() }
 
         adapter = ProfileAdapter(
             onSelect = { profile ->
@@ -87,10 +89,6 @@ class MainActivity : AppCompatActivity() {
                 requestPermissions()
                 AgentService.start(this)
             }
-        }
-
-        chat.setOnClickListener {
-            startActivity(Intent(this, ChatListActivity::class.java))
         }
 
         scan.setOnClickListener {
