@@ -11,3 +11,9 @@
 # On-device STT binaries (fetch with scripts/fetch-stt-assets.sh)
 /app/libs/
 /app/src/main/assets/stt/
+
+# Local agent artifacts (run-continuation state)
+/.omo/
+
+# Local agent artifacts
+/.omo/
