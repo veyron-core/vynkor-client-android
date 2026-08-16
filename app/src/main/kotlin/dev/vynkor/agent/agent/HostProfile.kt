@@ -21,6 +21,8 @@ data class HostProfile(
     val aiModel: String = "",
     val aiBaseUrl: String = "",
     val aiApiKeyEnv: String = "",
+    /** Selected agent profile id on the host ('' = host default agent). */
+    val aiAgent: String = "",
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -35,6 +37,7 @@ data class HostProfile(
         put("ai_model", aiModel)
         put("ai_base_url", aiBaseUrl)
         put("ai_api_key_env", aiApiKeyEnv)
+        put("ai_agent", aiAgent)
     }
 
     fun effectiveModel(): String =
@@ -62,6 +65,7 @@ data class HostProfile(
             aiModel = o.optString("ai_model"),
             aiBaseUrl = o.optString("ai_base_url"),
             aiApiKeyEnv = o.optString("ai_api_key_env"),
+            aiAgent = o.optString("ai_agent"),
         )
     }
 }
