@@ -6,23 +6,33 @@
 //! implements the foreign traits (ffi.rs), Rust runs the protocol.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::mpsc::{RecvTimeoutError, Sender as StdSender};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::JoinHandle;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use prost::Message;
 use tokio::sync::{mpsc, watch};
 use veyron_wire::framing::FLAG_RAW_BINARY;
-use veyron_wire::proto::veyron::{envelope, Envelope};
+use veyron_wire::proto::veyron::{envelope, ActionRequest, ActionStatus, Envelope};
 
 use crate::caps;
 use crate::error::AgentError;
 use crate::ffi::{
-    AgentConfig, BatteryProvider, ClipboardProvider, ContactsProvider, Location, LocationProvider,
-    SpeakerSink,
+    ActionReply, ActionReplyStatus, AgentConfig, AgentObserver, BatteryProvider, ClipboardProvider,
+    ContactsProvider, Location, LocationProvider, SpeakerSink,
 };
 use crate::protocol::{build_frame, is_kernel_routed, target_str, Frame};
 use crate::transport::{CapConn, RegisterParams, BACKOFF_INITIAL, BACKOFF_MAX};
+
+/// Capability that carries outbound request/response traffic (target "kernel",
+/// routed by action name). It has no host→device actions of its own.
+pub const CHAT_CAP: &str = "chat";
+
+/// Extra headroom over a request's timeout so the kernel's own terminal
+/// `ACTION_TIMEOUT` response can arrive instead of the device racing it.
+const REQUEST_TIMEOUT_MARGIN: Duration = Duration::from_secs(5);
 
 /// Lifecycle state; `is_connected()` is the only part visible to Kotlin.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,6 +71,11 @@ pub struct Agent {
     /// live outbound channels per capability, for the push paths
     caps: Mutex<HashMap<String, mpsc::Sender<Outbound>>>,
     live: AtomicUsize,
+    /// in-flight outbound requests, keyed by action_id; the inbound dispatch
+    /// loop resolves these when the correlated ActionResponse arrives
+    pending: Mutex<HashMap<String, StdSender<ActionReply>>>,
+    action_seq: AtomicU64,
+    observer: Mutex<Option<Arc<dyn AgentObserver>>>,
 }
 
 #[uniffi::export]
@@ -81,6 +96,9 @@ impl Agent {
             speaker: Mutex::new(None),
             caps: Mutex::new(HashMap::new()),
             live: AtomicUsize::new(0),
+            pending: Mutex::new(HashMap::new()),
+            action_seq: AtomicU64::new(0),
+            observer: Mutex::new(None),
         }
     }
 
@@ -151,6 +169,93 @@ impl Agent {
 
     pub fn set_speaker(&self, p: Arc<dyn SpeakerSink>) {
         *lock(&self.speaker) = Some(p);
+    }
+
+    pub fn set_observer(&self, o: Arc<dyn AgentObserver>) {
+        *lock(&self.observer) = Some(o);
+    }
+
+    /// Send an outbound `ActionRequest` to `target` ("kernel" for action-name
+    /// routing, or a specific plugin id) and block until the correlated
+    /// `ActionResponse` arrives or `timeout_ms` elapses. Call from a
+    /// background thread — never the Android main thread (the reply can take
+    /// tens of seconds).
+    pub fn request(
+        &self,
+        target: String,
+        action: String,
+        params_json: Vec<u8>,
+        timeout_ms: u32,
+    ) -> ActionReply {
+        let action_id = self.next_action_id();
+        let (tx, rx) = std::sync::mpsc::channel::<ActionReply>();
+        {
+            let mut pending = lock(&self.pending);
+            pending.insert(action_id.clone(), tx);
+        }
+
+        let req = ActionRequest {
+            action_id: action_id.clone(),
+            action,
+            params_json,
+            timeout_ms,
+            streaming: false,
+            caller_plugin_id: String::new(),
+        };
+        let env = Envelope {
+            payload: Some(envelope::Payload::ActionRequest(req)),
+            ..Default::default()
+        };
+        let mut payload = Vec::new();
+        if env.encode(&mut payload).is_err() {
+            self.take_pending(&action_id);
+            return ActionReply {
+                status: ActionReplyStatus::Local,
+                data_json: Vec::new(),
+                error: "encode request".into(),
+            };
+        }
+
+        let Some(out) = self.live_channel(CHAT_CAP) else {
+            self.take_pending(&action_id);
+            return ActionReply {
+                status: ActionReplyStatus::Local,
+                data_json: Vec::new(),
+                error: "no live chat connection to host".into(),
+            };
+        };
+        if out.try_send(Outbound { frame: build_frame(&target, 0, payload) }).is_err() {
+            self.take_pending(&action_id);
+            return ActionReply {
+                status: ActionReplyStatus::Local,
+                data_json: Vec::new(),
+                error: "send queue full".into(),
+            };
+        }
+
+        let timeout = if timeout_ms == 0 {
+            Duration::from_secs(30) + REQUEST_TIMEOUT_MARGIN
+        } else {
+            Duration::from_millis(timeout_ms as u64) + REQUEST_TIMEOUT_MARGIN
+        };
+        match rx.recv_timeout(timeout) {
+            Ok(reply) => reply,
+            Err(RecvTimeoutError::Timeout) => {
+                self.take_pending(&action_id);
+                ActionReply {
+                    status: ActionReplyStatus::Timeout,
+                    data_json: Vec::new(),
+                    error: "request timed out".into(),
+                }
+            }
+            Err(RecvTimeoutError::Disconnected) => {
+                ActionReply {
+                    status: ActionReplyStatus::Local,
+                    data_json: Vec::new(),
+                    error: "connection dropped".into(),
+                }
+            }
+        }
     }
 
     // ---- Kotlin -> Rust push paths (event-driven capabilities) ----
@@ -270,6 +375,28 @@ impl Agent {
         lock(&self.caps).get(cap).cloned()
     }
 
+    fn next_action_id(&self) -> String {
+        let seq = self.action_seq.fetch_add(1, Ordering::Relaxed);
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+        format!("act-{ts}-{seq}")
+    }
+
+    fn take_pending(&self, action_id: &str) -> Option<StdSender<ActionReply>> {
+        lock(&self.pending).remove(action_id)
+    }
+
+    fn notify_state(&self, connected: bool) {
+        let Some(observer) = lock(&self.observer).clone() else {
+            return;
+        };
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            observer.on_state_changed(connected);
+        }));
+    }
+
     fn send_raw_frame(&self, tx: &mpsc::Sender<Outbound>, env: Envelope, target: &str) {
         let mut payload = Vec::new();
         if env.encode(&mut payload).is_err() {
@@ -331,6 +458,27 @@ impl Agent {
                 let resp = caps::handle_action_request(self, cap, req);
                 self.reply(out, resp).await;
             }
+            Some(envelope::Payload::ActionResponse(resp)) => {
+                if let Some(tx) = self.take_pending(&resp.action_id) {
+                    tracing::info!(
+                        action_id = %resp.action_id,
+                        status = resp.status,
+                        data_len = resp.data_json.len(),
+                        error = %resp.error,
+                        "action response resolved"
+                    );
+                    let _ = tx.send(ActionReply {
+                        status: map_action_status(resp.status),
+                        data_json: resp.data_json,
+                        error: resp.error,
+                    });
+                } else {
+                    tracing::warn!(
+                        action_id = %resp.action_id,
+                        "unsolicited action response, dropping"
+                    );
+                }
+            }
             Some(envelope::Payload::SessionClose(_)) => {
                 tracing::info!(cap, "host closed session");
             }
@@ -354,6 +502,19 @@ fn spawn_cap_loop(agent: Arc<Agent>, cap: String, stop_rx: watch::Receiver<bool>
     tokio::spawn(async move {
         cap_loop(agent, cap, stop_rx).await;
     });
+}
+
+fn map_action_status(status: i32) -> ActionReplyStatus {
+    match status {
+        s if s == ActionStatus::ActionOk as i32 => ActionReplyStatus::Ok,
+        s if s == ActionStatus::ActionError as i32 => ActionReplyStatus::Error,
+        s if s == ActionStatus::ActionTimeout as i32 => ActionReplyStatus::Timeout,
+        s if s == ActionStatus::ActionPermissionDeny as i32 => ActionReplyStatus::PermissionDenied,
+        s if s == ActionStatus::ActionNotFound as i32 => ActionReplyStatus::NotFound,
+        s if s == ActionStatus::ActionQuotaExceeded as i32 => ActionReplyStatus::QuotaExceeded,
+        s if s == ActionStatus::ActionStreamBackpressure as i32 => ActionReplyStatus::StreamBackpressure,
+        _ => ActionReplyStatus::Error,
+    }
 }
 
 /// Install the tracing subscriber once (no-op on repeat calls) so protocol
@@ -419,8 +580,11 @@ async fn one_cycle(agent: Arc<Agent>, cap: String) -> Result<(), AgentError> {
         let mut caps = lock(&agent.caps);
         caps.insert(cap.clone(), out_tx.clone());
     }
-    agent.live.fetch_add(1, Ordering::Relaxed);
+    let prev_live = agent.live.fetch_add(1, Ordering::Relaxed);
     *lock(&agent.state) = AgentState::Connected;
+    if prev_live == 0 {
+        agent.notify_state(true);
+    }
 
     // write loop: drains push-path + reply frames, MACs, sends
     let write_task = tokio::spawn(async move {
@@ -464,10 +628,53 @@ async fn one_cycle(agent: Arc<Agent>, cap: String) -> Result<(), AgentError> {
     };
 
     write_task.abort();
-    agent.live.fetch_sub(1, Ordering::Relaxed);
+    let prev_live = agent.live.fetch_sub(1, Ordering::Relaxed);
     lock(&agent.caps).remove(&cap);
-    if agent.live.load(Ordering::Relaxed) == 0 {
+    if prev_live == 1 {
         *lock(&agent.state) = AgentState::Disconnected;
+        agent.notify_state(false);
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use veyron_wire::proto::veyron::ActionStatus as Status;
+
+    #[test]
+    fn maps_action_statuses() {
+        assert!(matches!(
+            map_action_status(Status::ActionOk as i32),
+            ActionReplyStatus::Ok
+        ));
+        assert!(matches!(
+            map_action_status(Status::ActionError as i32),
+            ActionReplyStatus::Error
+        ));
+        assert!(matches!(
+            map_action_status(Status::ActionTimeout as i32),
+            ActionReplyStatus::Timeout
+        ));
+        assert!(matches!(
+            map_action_status(Status::ActionPermissionDeny as i32),
+            ActionReplyStatus::PermissionDenied
+        ));
+        assert!(matches!(
+            map_action_status(Status::ActionNotFound as i32),
+            ActionReplyStatus::NotFound
+        ));
+        assert!(matches!(
+            map_action_status(Status::ActionQuotaExceeded as i32),
+            ActionReplyStatus::QuotaExceeded
+        ));
+        assert!(matches!(
+            map_action_status(Status::ActionStreamBackpressure as i32),
+            ActionReplyStatus::StreamBackpressure
+        ));
+        assert!(matches!(
+            map_action_status(999),
+            ActionReplyStatus::Error
+        ));
+    }
 }

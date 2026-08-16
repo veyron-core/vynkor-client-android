@@ -45,6 +45,40 @@ pub struct Contact {
     pub emails: Vec<String>,
 }
 
+/// Outcome of an outbound [`Agent::request`] call, mirroring the kernel's
+/// `ActionStatus` (plus a local timeout when the host never answers).
+#[derive(uniffi::Enum)]
+pub enum ActionReplyStatus {
+    Ok,
+    Error,
+    Timeout,
+    PermissionDenied,
+    NotFound,
+    QuotaExceeded,
+    StreamBackpressure,
+    /// The request couldn't even be sent (no live connection, encode failure).
+    Local,
+}
+
+/// Reply to an outbound action request: the terminal `ActionResponse`
+/// (status + `data_json` + `error`) correlated back to the caller.
+#[derive(uniffi::Record)]
+pub struct ActionReply {
+    pub status: ActionReplyStatus,
+    pub data_json: Vec<u8>,
+    pub error: String,
+}
+
+/// Kotlin-implemented observer the core notifies on connection-state changes
+/// so the UI can show a live indicator without polling.
+#[uniffi::export(with_foreign)]
+pub trait AgentObserver: Send + Sync {
+    /// Called when the agent transitions between "at least one capability
+    /// connection live" and "none live". Runs on the agent's runtime thread —
+    /// implementations must not block (post to the main thread if needed).
+    fn on_state_changed(&self, connected: bool);
+}
+
 // ---------- foreign traits: Kotlin implements, Rust pulls ----------
 
 /// Backend for `device.battery` — read by Rust on a host request.
