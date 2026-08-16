@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">vynkor agent</string>
+    <string name="notification_listener_label">vynkor notifications</string>
+    <string name="service_channel_name">vynkor connection</string>
+    <string name="service_notification_title">Connected to host</string>
+    <string name="service_notification_text">Device agent is running</string>
+    <string name="onboarding_title">Connect your phone to a vynkor host</string>
+    <string name="onboarding_body">This app turns your phone into a remote device: geo, battery, notifications, clipboard, contacts, mic and speaker become callable capabilities on your host kernel.</string>
+    <string name="host_url_hint">Host URL (wss://host:port)</string>
+    <string name="device_id_hint">Device ID (must match JWT sub)</string>
+    <string name="device_token_hint">Device JWT</string>
+    <string name="host_secret_hint">Host jwt_secret</string>
+    <string name="connect_button">Connect</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_connected">Connected</string>
+    <string name="enable_notification_access">Enable notification access</string>
+    <string name="enable_notification_access_body">vynkor reads your notifications in the background so the host AI can see them. You must enable this in system settings — it cannot be granted as a normal permission.</string>
+    <string name="open_settings">Open settings</string>
+</resources>

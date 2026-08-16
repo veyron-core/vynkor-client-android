@@ -21,6 +21,12 @@ pub struct AgentConfig {
     /// Capabilities to register, e.g.
     /// `["geo", "battery", "notifications", "clipboard", "contacts", "mic", "speaker"]`.
     pub capabilities: Vec<String>,
+    /// Android OS version reported to the host, e.g. "14".
+    pub os_version: String,
+    /// CPU arch reported to the host, e.g. "aarch64".
+    pub arch: String,
+    /// Host user this device belongs to; defaults to "default".
+    pub user_id: String,
 }
 
 /// A location fix.
